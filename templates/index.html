@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>LexiNova Translator</title>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="logo-header">
+
+<img src="{{ url_for('static', filename='logo.png') }}" class="main-logo">
+
+</div>
+
+
+<div class="translator-container">
+
+<!-- SOURCE BOX -->
+
+<div class="box">
+
+<h3>Source Language</h3>
+
+<select id="sourceLang">
+<option value="auto">Auto Detect</option>
+<option>English</option>
+<option>Hindi</option>
+<option>French</option>
+<option>German</option>
+<option>Spanish</option>
+<option>Japanese</option>
+</select>
+
+<p id="detectedLang">Detected: -</p>
+
+<textarea id="inputText" placeholder="Type or speak text..."></textarea>
+
+</div>
+
+
+<div class="swap-container">
+
+<button>⇄</button>
+
+</div>
+
+
+<!-- TARGET BOX -->
+
+<div class="box">
+
+<h3>Target Language</h3>
+
+<select id="targetLang">
+
+<option>Hindi</option>
+<option>English</option>
+<option>French</option>
+<option>German</option>
+<option>Spanish</option>
+<option>Japanese</option>
+
+</select>
+
+<textarea id="outputText" readonly></textarea>
+
+<div class="output-buttons">
+
+<button onclick="copyText()">📋 Copy</button>
+
+<button onclick="speakText()">🔊 Speak</button>
+
+</div>
+
+</div>
+
+</div>
+
+
+<div class="controls">
+
+<button onclick="translateText()">Translate</button>
+
+<button onclick="startVoice()">🎤 Voice</button>
+
+<input type="file" id="fileInput">
+
+<button onclick="translateFile()">Translate File</button>
+
+</div>
+
+
+<!-- Recent History -->
+
+<div class="history">
+
+<h3>Recent Translations</h3>
+
+<ul id="historyList"></ul>
+
+</div>
+
+
+<!-- Loader -->
+
+<div id="loadingPopup" class="loading-popup">
+
+<div class="loader"></div>
+<p>Translating...</p>
+
+</div>
+
+
+</div>
+
+
+<script>
+
+let history = []
+
+
+async function translateText(){
+
+let text = document.getElementById("inputText").value
+let target = document.getElementById("targetLang").value
+
+if(text.trim()===""){
+alert("Enter text")
+return
+}
+
+document.getElementById("loadingPopup").style.display="flex"
+
+let response = await fetch("/translate",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+text:text,
+target_language:target
+})
+
+})
+
+let data = await response.json()
+
+document.getElementById("outputText").value = data.translated_text
+
+document.getElementById("detectedLang").innerText =
+"Detected: " + data.detected_language
+
+
+addHistory(text,data.translated_text)
+
+document.getElementById("loadingPopup").style.display="none"
+
+}
+
+
+function addHistory(input,output){
+
+history.unshift(input + " → " + output)
+
+if(history.length > 5){
+history.pop()
+}
+
+let list = document.getElementById("historyList")
+
+list.innerHTML=""
+
+history.forEach(item=>{
+
+let li=document.createElement("li")
+li.innerText=item
+
+list.appendChild(li)
+
+})
+
+}
+
+
+function copyText(){
+
+let text=document.getElementById("outputText").value
+
+navigator.clipboard.writeText(text)
+
+}
+
+
+function speakText(){
+
+let text=document.getElementById("outputText").value
+
+let speech=new SpeechSynthesisUtterance(text)
+
+speechSynthesis.speak(speech)
+
+}
+
+
+function startVoice(){
+
+const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)()
+
+recognition.lang = "en-US"
+
+recognition.start()
+
+recognition.onresult=function(event){
+
+let speech=event.results[0][0].transcript
+
+document.getElementById("inputText").value=speech
+
+}
+
+}
+
+
+async function translateFile(){
+
+let file=document.getElementById("fileInput").files[0]
+
+let target=document.getElementById("targetLang").value
+
+let formData=new FormData()
+
+formData.append("file",file)
+formData.append("target_language",target)
+
+let response=await fetch("/translate-file",{
+
+method:"POST",
+body:formData
+
+})
+
+let data=await response.json()
+
+document.getElementById("outputText").value=data.translated_text
+
+}
+
+</script>
+
+</body>
+
+</html>
