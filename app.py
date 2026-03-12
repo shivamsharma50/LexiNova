@@ -4,7 +4,9 @@ from langdetect import detect
 
 app = Flask(__name__)
 
-client = Groq(api_key="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")
+import os
+
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 def translate_text(text, target_language):
 
     try:
